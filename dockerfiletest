@@ -1,0 +1,27 @@
+FROM maven:3.8.7-openjdk-18-slim AS build
+
+# Установим рабочую директорию
+WORKDIR /app
+
+# Скопируем pom.xml и другие файлы для мейвена, чтобы установить зависимости
+COPY pom.xml .
+
+# Скачиваем зависимости
+RUN mvn dependency:go-offline
+
+# Копируем весь исходный код
+COPY . .
+
+# Выполняем сборку и тестирование
+RUN mvn clean test
+
+# Копируем собранный JAR файл для выполнения
+FROM openjdk:23-jdk-slim
+
+WORKDIR /app
+
+# Копируем скомпилированный JAR файл из предыдущего этапа
+COPY --from=build /app/target/TaskManager-0.0.1-SNAPSHOT.jar app.jar
+
+# Запускаем приложение, если тесты прошли
+ENTRYPOINT ["java", "-Dspring.profiles.active=test", "-jar", "app.jar"]
